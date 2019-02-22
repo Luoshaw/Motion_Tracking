@@ -118,7 +118,7 @@ if __name__ == "__main__":
 	reader = packet_reader('COM6', 500000, 1)
 	dur() #Initialise the timing clock
 
-	with open("test.csv", "wb") as csvfile:	
+	with open("test2.csv", "wb") as csvfile:	
 		writer = csv.writer(csvfile)
 		writer.writerow(["accx", "accy", "accz", "gyrox", "gyroy", "gyroz"])	
 		while 1:		
