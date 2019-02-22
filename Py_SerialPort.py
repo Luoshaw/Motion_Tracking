@@ -1,9 +1,16 @@
 #coding:utf-8
-
+import csv
 import serial
 import binascii
 import struct
 import numpy as np
+import time
+#============Timing Function=====================
+def dur(op=None, clock=[time.time()]):
+	if op != None:
+		duration = time.time() - clock[0]
+		print '%s finished. Duration %.6f seconds.' % (op, duration)
+	clock[0] = time.time()
 #==============Read Serial data==================
 class packet_reader:
 	def __init__(self, port, baudrate, timeout):
@@ -24,7 +31,6 @@ class packet_reader:
 
 	def close(self):
 		self.ser.close()
-
 # =================== PACKETS =================== 
 # 2bytes to 1 short value
 def bytestoshort(d1,d2):
@@ -105,15 +111,25 @@ class TcpData(object):
 		print "LocalTime: ", self.LocalTime
 		print "Time: "+str(self.year)+"/"+str(self.month)+"/"+str(self.day)+" "+str(self.hour)+":"+str(self.minute)+":"+str(self.second)+":"+str(self.ms) 
 		print '\n'
-
 # ==================== MAIN ======================
 if __name__ == "__main__":
-	
+
+	count = 0
 	reader = packet_reader('COM6', 500000, 1)
-	while 1:
-		reader.read()
-		#Raw data dispose
-		if reader.rec == 1:
-			Data = TcpData(reader.receidata)
-			Data.display()
-				
+	dur() #Initialise the timing clock
+
+	with open("test.csv", "wb") as csvfile:	
+		writer = csv.writer(csvfile)
+		writer.writerow(["accx", "accy", "accz", "gyrox", "gyroy", "gyroz"])	
+		while 1:		
+			reader.read()
+			#Raw data dispose
+			if reader.rec == 1:	
+				Data = TcpData(reader.receidata)
+				writer.writerow([Data.dmp_accx, Data.dmp_accy, Data.dmp_accz, Data.dmp_gyrox, Data.dmp_gyroy, Data.dmp_gyroz])	
+				count += 1
+				if count == 100:
+					dur('Data dispose')
+					count = 0
+					# Data.display()
+					
