@@ -191,7 +191,7 @@ with open('straightLine_CalInertialAndMag.csv','rb') as csvfile:
 samplePeriod = float(1)/256
 # print samplePeriod
 startTime = 6
-stopTime = 26 
+stopTime = 26
 timeraw = []
 
 for i in range(len(gyroXraw)):

@@ -115,21 +115,23 @@ class TcpData(object):
 if __name__ == "__main__":
 
 	count = 0
-	reader = packet_reader('COM6', 500000, 1)
+	Packet_number = 0
+ 	reader = packet_reader('COM6', 500000, 1)
 	dur() #Initialise the timing clock
 
-	with open("test2.csv", "wb") as csvfile:	
+	with open("IMUrawdata1.csv", "wb") as csvfile:	
 		writer = csv.writer(csvfile)
-		writer.writerow(["accx", "accy", "accz", "gyrox", "gyroy", "gyroz"])	
+		writer.writerow(["Packet number", "gyrox", "gyroy", "gyroz", "accx", "accy", "accz"])	
 		while 1:		
 			reader.read()
 			#Raw data dispose
 			if reader.rec == 1:	
 				Data = TcpData(reader.receidata)
-				writer.writerow([Data.dmp_accx, Data.dmp_accy, Data.dmp_accz, Data.dmp_gyrox, Data.dmp_gyroy, Data.dmp_gyroz])	
+				Packet_number += 1
+				writer.writerow([Packet_number, Data.dmp_gyrox, Data.dmp_gyroy, Data.dmp_gyroz, Data.dmp_accx, Data.dmp_accy, Data.dmp_accz])	
 				count += 1
 				if count == 100:
 					dur('Data dispose')
 					count = 0
-					# Data.display()
+					Data.display()
 					
