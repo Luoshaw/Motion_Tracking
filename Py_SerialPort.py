@@ -23,11 +23,14 @@ class packet_reader:
 		head = self.ser.read(1)
 		if chr(ord(head)) == 'R':
 			self.receidata.append(head)
-			rm = self.ser.read(87)
-			for s in rm[0:87]:
-				self.receidata.append(s)
-			self.rec = 1
-			# print receidata			
+			nex = self.ser.read(1)
+			if chr(ord(nex)) == 'o':
+				self.receidata.append(nex)
+				rm = self.ser.read(86)
+				for s in rm[0:86]:
+					self.receidata.append(s)
+				self.rec = 1
+				# print receidata			
 
 	def close(self):
 		self.ser.close()
@@ -119,7 +122,7 @@ if __name__ == "__main__":
  	reader = packet_reader('COM6', 500000, 1)
 	dur() #Initialise the timing clock
 
-	with open("IMUrawdata1.csv", "wb") as csvfile:	
+	with open("DataAnalysis/IMUrawdata3.csv", "wb") as csvfile:	
 		writer = csv.writer(csvfile)
 		writer.writerow(["Packet number", "gyrox", "gyroy", "gyroz", "accx", "accy", "accz"])	
 		while 1:		
@@ -133,5 +136,5 @@ if __name__ == "__main__":
 				if count == 100:
 					dur('Data dispose')
 					count = 0
-					Data.display()
+					# Data.display()
 					

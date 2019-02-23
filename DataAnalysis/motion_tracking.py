@@ -172,7 +172,7 @@ accXraw = []
 accYraw = []
 accZraw = []
  
-with open('straightLine_CalInertialAndMag.csv','rb') as csvfile:
+with open('test2.csv','rb') as csvfile:
 	datareader = csv.reader(csvfile, delimiter=',',quoting=csv.QUOTE_NONE)
 	numofline = 0
 	for row in datareader:
@@ -188,10 +188,10 @@ with open('straightLine_CalInertialAndMag.csv','rb') as csvfile:
 # print 'accXraw[0:9]: ', accXraw[0:9]
 
 #===============def samplePeriod and timeslice=======================
-samplePeriod = float(1)/256
+samplePeriod = float(1)/200
 # print samplePeriod
-startTime = 6
-stopTime = 26
+startTime = 2
+stopTime = 55
 timeraw = []
 
 for i in range(len(gyroXraw)):
@@ -250,7 +250,7 @@ acc_magFilt = signal.filtfilt(b, a, acc_magFilt)
 # print 'acc_magFilt[0:99]: ', acc_magFilt[0:100]
 
 for num in range(len(acc_magFilt)):
-	if acc_magFilt[num] < 0.05:
+	if acc_magFilt[num] < 0.06:
 		stationary.append(1)
 	else:
 		stationary.append(0)
@@ -260,7 +260,7 @@ for num in range(len(acc_magFilt)):
 plt.figure(num = 'Sensor Data', figsize=(9, 25))
 plt.subplot(211)
 plt.plot(time, gyroX, 'r')
-plt.plot(time, gyroY, 'g')
+plt.plot(time, gyroY, 'y')
 plt.plot(time, gyroZ, 'b')
 plt.xlim((startTime,stopTime))
 plt.xlabel('Time(s)')
@@ -269,7 +269,7 @@ plt.title('Gyroscope')
 plt.legend(('X', 'Y', 'Z'))
 plt.subplot(212)
 plt.plot(time, accX, 'r')
-plt.plot(time, accY, 'g')
+plt.plot(time, accY, 'y')
 plt.plot(time, accZ, 'b')
 plt.plot(time, acc_magFilt, ':k')
 plt.plot(time, stationary, 'k', 'LineWidth', 2)
@@ -319,7 +319,7 @@ acc = []
 for i in range(len(accX)):
 	acc.append([accX[i], accY[i], accZ[i]])
 acc = quaternRotate(acc, quatConj, quat)
-# print acc[0:9]
+# print acc[0:100]
 #===== Convert acceleration measurements to m/s/s====
 for i in range(len(acc)):
 	acc[i] = [x*9.81 for x in acc[i]]
@@ -335,7 +335,7 @@ for i in range(len(acc)):
 
 plt.figure(num = 'Accelerations')
 plt.plot(time, acc_x_afrotate, 'r')
-plt.plot(time, acc_y_afrotate, 'g')
+plt.plot(time, acc_y_afrotate, 'y')
 plt.plot(time, acc_z_afrotate, 'b')
 plt.xlim((startTime,stopTime))
 plt.xlabel('Time(s)')
@@ -388,7 +388,7 @@ for i in range(len(vel)):
 	vel_z.append(vel[i][2])
 plt.figure(num = 'Velocity')
 plt.plot(time, vel_x, 'r')
-plt.plot(time, vel_y, 'g')
+plt.plot(time, vel_y, 'y')
 plt.plot(time, vel_z, 'b')
 plt.xlim((startTime, stopTime))
 plt.xlabel('Time(s)')
@@ -416,7 +416,7 @@ for i in range(len(pos)):
 	pos_z.append(pos[i][2])
 plt.figure(num = 'Position')
 plt.plot(time, pos_x, 'r')
-plt.plot(time, pos_y, 'g')
+plt.plot(time, pos_y, 'y')
 plt.plot(time, pos_z, 'b')
 plt.xlim((startTime, stopTime))
 plt.xlabel('Time(s)')
