@@ -172,7 +172,7 @@ accXraw = []
 accYraw = []
 accZraw = []
  
-with open('test2.csv','rb') as csvfile:
+with open('test4.csv','rb') as csvfile:
 	datareader = csv.reader(csvfile, delimiter=',',quoting=csv.QUOTE_NONE)
 	numofline = 0
 	for row in datareader:
@@ -190,8 +190,8 @@ with open('test2.csv','rb') as csvfile:
 #===============def samplePeriod and timeslice=======================
 samplePeriod = float(1)/200
 # print samplePeriod
-startTime = 2
-stopTime = 55
+startTime = 8
+stopTime = 53
 timeraw = []
 
 for i in range(len(gyroXraw)):
@@ -250,7 +250,7 @@ acc_magFilt = signal.filtfilt(b, a, acc_magFilt)
 # print 'acc_magFilt[0:99]: ', acc_magFilt[0:100]
 
 for num in range(len(acc_magFilt)):
-	if acc_magFilt[num] < 0.06:
+	if acc_magFilt[num] < 0.05:
 		stationary.append(1)
 	else:
 		stationary.append(0)

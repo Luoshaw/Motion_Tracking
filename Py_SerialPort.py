@@ -119,10 +119,10 @@ if __name__ == "__main__":
 
 	count = 0
 	Packet_number = 0
- 	reader = packet_reader('COM6', 500000, 1)
+ 	reader = packet_reader('COM4', 500000, 1)
 	dur() #Initialise the timing clock
 
-	with open("DataAnalysis/IMUrawdata3.csv", "wb") as csvfile:	
+	with open("DataAnalysis/IMUrawdata4.csv", "wb") as csvfile:	
 		writer = csv.writer(csvfile)
 		writer.writerow(["Packet number", "gyrox", "gyroy", "gyroz", "accx", "accy", "accz"])	
 		while 1:		
@@ -136,5 +136,5 @@ if __name__ == "__main__":
 				if count == 100:
 					dur('Data dispose')
 					count = 0
-					# Data.display()
+					Data.display()
 					
