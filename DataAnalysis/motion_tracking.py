@@ -229,11 +229,14 @@ for selnum in range(len(indexSel)):
 
 #======================detect stationary period======================
 acc_mag = []
+gyro_mag = []
 stationary = []
 i = 0
 while (i < len(accX)):
 	calsq = math.sqrt(accX[i] * accX[i] + accY[i] * accY[i] + accZ[i] * accZ[i])
+	gyromagsq = math.sqrt(gyroX[i] * gyroX[i] + gyroY[i] * gyroY[i] + gyroZ[i] * gyroZ[i])
 	acc_mag.append(calsq)
+	gyro_mag.append(gyromagsq)
 	i = i + 1
 # print 'acc_mag[0:99]: ', acc_mag[0:100]
 
@@ -267,6 +270,12 @@ plt.xlabel('Time(s)')
 plt.ylabel('Angular velocity(deg/s)')
 plt.title('Gyroscope')
 plt.legend(('X', 'Y', 'Z'))
+# plt.plot(time, gyro_mag, 'r')
+# plt.xlim((startTime,stopTime))
+# plt.xlabel('Time(s)')
+# plt.ylabel('Angular velocity(deg/s)')
+# plt.title('Gyroscope')
+# plt.legend(('X'))
 plt.subplot(212)
 plt.plot(time, accX, 'r')
 plt.plot(time, accY, 'y')

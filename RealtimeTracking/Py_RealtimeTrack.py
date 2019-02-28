@@ -4,6 +4,7 @@ import struct
 import time
 import numpy as np
 import warnings
+import math
 
 #==============Read Serial data==================
 # Init the serial port and read data by 
@@ -52,7 +53,7 @@ def bytestofloat(d1, d2, d3, d4):
 	return x
 #Tcpdata struct
 class TcpData(object):
-	def __init__(self, l):
+	def __init__(self, l, gyro_offset):
 		self.DataType = []
 		self.DataName = []
 		self.dmp_qx = 0.0
@@ -93,9 +94,9 @@ class TcpData(object):
 		self.dmp_accy = bytestofloat(l[40], l[41], l[42], l[43])
 		self.dmp_accz = bytestofloat(l[44], l[45], l[46], l[47])
 		#gyro
-		self.dmp_gyrox = bytestofloat(l[48], l[49], l[50], l[51])
-		self.dmp_gyroy = bytestofloat(l[52], l[53], l[54], l[55])
-		self.dmp_gyroz = bytestofloat(l[56], l[57], l[58], l[59])
+		self.dmp_gyrox = bytestofloat(l[48], l[49], l[50], l[51]) - gyro_offset[0]
+		self.dmp_gyroy = bytestofloat(l[52], l[53], l[54], l[55]) - gyro_offset[1]
+		self.dmp_gyroz = bytestofloat(l[56], l[57], l[58], l[59]) - gyro_offset[2]
 		#LocalTime
 		for i in l[60:70]:
 			self.LocalTime.append(chr(ord(i)))
@@ -138,26 +139,34 @@ def quaternRotate(v, q, qconj):
 	v = [v0xyz[1], v0xyz[2], v0xyz[3]]
 	return v
 # Initial AHRS parameter
-def InitCovergence():
-	InitConvegence = 0
+def InitCovergence(gyro_offset):
+	count = 0
+	SampleNumber = 300
 	accX = []
 	accY = []
 	accZ = []
+	gyroX = []
+	gyroY = []
+	gyroZ = []
 	AHRSalgorithm = AHRS(samplePeriod, 1, 1)
-	while InitConvegence < 400:
+	while count < SampleNumber:
 		reader.read()
 		if reader.rec == True:
-			Data = TcpData(reader.receidata)
+			Data = TcpData(reader.receidata, gyro_offset)
 			accX.append(Data.dmp_accx)
 			accY.append(Data.dmp_accy)
 			accZ.append(Data.dmp_accz)
-			InitConvegence += 1
-	accX_mean = average(accX, 400)
-	accY_mean = average(accY, 400)
-	accZ_mean = average(accZ, 400)
+			gyroX.append(Data.dmp_gyrox)
+			gyroY.append(Data.dmp_gyroy)
+			gyroZ.append(Data.dmp_gyroz)
+			count += 1
+	accX_mean = average(accX, SampleNumber)
+	accY_mean = average(accY, SampleNumber)
+	accZ_mean = average(accZ, SampleNumber)
+	gyro_offset = [average(gyroX, SampleNumber), average(gyroY, SampleNumber), average(gyroZ, SampleNumber)]
 	for x in range(2000):
 		AHRSalgorithm.UndateIMU([0, 0, 0], [accX_mean, accY_mean, accZ_mean])
-	return AHRSalgorithm
+	return [gyro_offset, AHRSalgorithm]
 # Update Quaternion
 def UpdateQuat(data):
 	gyroXrad = np.deg2rad(data.dmp_gyrox)
@@ -165,6 +174,20 @@ def UpdateQuat(data):
 	gyroZrad = np.deg2rad(data.dmp_gyroz)
 	AHRSalgorithm.UndateIMU([gyroXrad, gyroYrad, gyroZrad], [data.dmp_accx, data.dmp_accy, data.dmp_accz])
 	return AHRSalgorithm.Quaternion.toArray()
+# Convert quaternion to euler
+def quat2euler(quat):
+	w = quat[0]
+	x = quat[1]
+	y = quat[2]
+	z = quat[3]
+	r = math.atan2(2*(w*x+y*z), 1-2*(x*x+y*y))
+	p = math.asin(2*(w*y-z*z))
+	y = math.atan2(2*(w*z+x*y), 1-2*(z*z+y*y))
+	angleR = r*180/math.pi
+	angleP = p*180/math.pi
+	angleY = y*180/math.pi
+	result = [angleR, angleP, angleY]
+	return result
 # quaternion class
 class Quaternion:
     def __init__(self,array):
@@ -290,16 +313,20 @@ class AHRS(object):
 # ==================== MAIN ======================
 #Init velocity and position
 samplePeriod = float(1)/200
+accReal_1 = [0.0, 0.0, 0.0]
+velocity_1 = [0.0, 0.0, 0.0]
 velocity = [0.0, 0.0, 0.0]
 position  = [0.0, 0.0, 0.0]
+gyro_offset = [0.0, 0.0, 0.0]
+acc_offset = [0.0, 0.0, 0.0]
+disp_count = 0
 
 #Init serial port
-reader = packet_reader('COM7', 500000, 1)
+reader = packet_reader('COM6', 500000, 1)
 
 #Init AHRS parameters
-AHRSalgorithm = InitCovergence()
+[gyro_offset, AHRSalgorithm] = InitCovergence(gyro_offset)	
 # print AHRSalgorithm.Quaternion.w, AHRSalgorithm.Quaternion.x, AHRSalgorithm.Quaternion.y, AHRSalgorithm.Quaternion.z
-
 #Forever LOOP
 while True:
 	#Read raw data from serial		
@@ -307,22 +334,44 @@ while True:
 	#while data receives
 	if reader.rec == True:	
 		#Raw data dispose
-		Data = TcpData(reader.receidata)
+		Data = TcpData(reader.receidata, gyro_offset)
 		#display data
 		# Data.display()
 		if (abs(Data.dmp_accx) < 8 and abs(Data.dmp_accy) < 8 and abs(Data.dmp_accz) < 8 and abs(Data.dmp_gyrox) < 2000 and abs(Data.dmp_gyroy) < 2000 and abs(Data.dmp_gyroz) < 2000 ):
 			#Attitude algorithm
 			quat = UpdateQuat(Data)
-			# print quat
+			euler = quat2euler(quat)
+			#calculate quaternion conjugate
 			quatConj = quaternConj(quat)
+			#transform acc to geographic coordinate system
 			acc = quaternRotate([Data.dmp_accx, Data.dmp_accy, Data.dmp_accz], quatConj, quat)
 			accReal = [x*9.81 for x in acc]
+			#remove gravity
 			accReal[2] = accReal[2] - 9.81
-			print "acc: ", accReal
-			for i in range(3):
-				velocity[i] = velocity[i] + samplePeriod * accReal[i]
-			print "velocity: ", velocity
-			for i in range(3):
-				position[i] = position[i] + samplePeriod * velocity[i]
-			print "position: ", position, "\n"
-			
+			acc_mag = math.sqrt(accReal[0]*accReal[0] + accReal[1]*accReal[1] + accReal[2]*accReal[2])
+			gyro_mag = math.sqrt(Data.dmp_gyrox*Data.dmp_gyrox + Data.dmp_gyroy*Data.dmp_gyroy + Data.dmp_gyroz*Data.dmp_gyroz)	
+			#detect stationary states
+			if gyro_mag > 20:
+				#Update velocity and position
+				for i in range(3):
+					velocity[i] = velocity[i] + samplePeriod * (accReal[i] + accReal_1[i]) / 2
+				for i in range(3):
+					position[i] = position[i] + samplePeriod * (velocity[i]	+ velocity_1[i]) / 2			
+			else:
+				for i in range(3):
+					velocity[i] = 0
+				for i in range(3):
+					position[i] = position[i] + samplePeriod * (velocity[i]	+ velocity_1[i]) / 2			
+			accReal_1 = accReal
+			velocity_1 = velocity
+			#display parameter
+			disp_count += 1
+			if disp_count == 100:
+				disp_count = 0				
+				print "quaternion: ", quat
+				print "euler: ", euler
+				print "acc: ", accReal
+				print "acc_mag: ", acc_mag
+				print "gyro_mag: ", gyro_mag
+				print "velocity: ", velocity
+				print "position: ", position, "\n"
