@@ -141,7 +141,7 @@ def quaternRotate(v, q, qconj):
 # Initial AHRS parameter
 def InitCovergence(gyro_offset):
 	count = 0
-	SampleNumber = 300
+	SampleNumber = 400
 	accX = []
 	accY = []
 	accZ = []
@@ -153,13 +153,14 @@ def InitCovergence(gyro_offset):
 		reader.read()
 		if reader.rec == True:
 			Data = TcpData(reader.receidata, gyro_offset)
-			accX.append(Data.dmp_accx)
-			accY.append(Data.dmp_accy)
-			accZ.append(Data.dmp_accz)
-			gyroX.append(Data.dmp_gyrox)
-			gyroY.append(Data.dmp_gyroy)
-			gyroZ.append(Data.dmp_gyroz)
-			count += 1
+			if (abs(Data.dmp_accx) < 8 and abs(Data.dmp_accy) < 8 and abs(Data.dmp_accz) < 8 and abs(Data.dmp_gyrox) < 2000 and abs(Data.dmp_gyroy) < 2000 and abs(Data.dmp_gyroz) < 2000 ):
+				accX.append(Data.dmp_accx)
+				accY.append(Data.dmp_accy)
+				accZ.append(Data.dmp_accz)
+				gyroX.append(Data.dmp_gyrox)
+				gyroY.append(Data.dmp_gyroy)
+				gyroZ.append(Data.dmp_gyroz)
+				count += 1
 	accX_mean = average(accX, SampleNumber)
 	accY_mean = average(accY, SampleNumber)
 	accZ_mean = average(accZ, SampleNumber)
@@ -310,6 +311,51 @@ class AHRS(object):
 		self.Quaternion.x = -self.q[1]
 		self.Quaternion.y = -self.q[2]
 		self.Quaternion.z = -self.q[3]
+
+#=====================ZUPT========================
+class ZUPT:
+	def __init__(self, m):
+		#zero speed check init
+		self.C1 = 0
+		self.C2 = 0
+		self.C3 = 0
+		self.m = m
+		self.fkseq = [9.8] * m
+		self.state = 0
+
+	def ZeroCheck(self, acc_mag, gyro_mag):
+		#比力模值检测
+		if acc_mag > 9.05 and acc_mag < 10.4:
+			self.C1 = 1
+		else:
+			self.C1 = 0
+		#比力方差检测
+		sum = 0
+		self.fkseq[self.m-1] = acc_mag
+		for x in range(self.m):
+			sum += self.fkseq[x]
+		fkb_ = sum / self.m
+		sum2 = 0
+		for n in range(self.m):
+			sum2 += np.square(self.fkseq[n] - fkb_)
+		thetafkb = math.sqrt(sum2 / self.m)
+		if thetafkb < 0.25:
+			self.C2 = 1
+		else:
+			self.C2 = 0
+		for q in range(self.m-1):
+			self.fkseq[q] = self.fkseq[q + 1]
+		#角速度模值
+		if gyro_mag < 20:
+			self.C3 = 1
+		else:
+			self.C3 = 0
+		#C1 & C2 & C3
+		if self.C1 and self.C2 and self.C3:
+			self.state = 1
+		else:
+			self.state = 0
+
 # ==================== MAIN ======================
 #Init velocity and position
 samplePeriod = float(1)/200
@@ -318,11 +364,11 @@ velocity_1 = [0.0, 0.0, 0.0]
 velocity = [0.0, 0.0, 0.0]
 position  = [0.0, 0.0, 0.0]
 gyro_offset = [0.0, 0.0, 0.0]
-acc_offset = [0.0, 0.0, 0.0]
+stationary = 0
 disp_count = 0
-
+zupt = ZUPT(20)
 #Init serial port
-reader = packet_reader('COM6', 500000, 1)
+reader = packet_reader('COM4', 500000, 1)
 
 #Init AHRS parameters
 [gyro_offset, AHRSalgorithm] = InitCovergence(gyro_offset)	
@@ -346,12 +392,15 @@ while True:
 			#transform acc to geographic coordinate system
 			acc = quaternRotate([Data.dmp_accx, Data.dmp_accy, Data.dmp_accz], quatConj, quat)
 			accReal = [x*9.81 for x in acc]
-			#remove gravity
-			accReal[2] = accReal[2] - 9.81
+			#calculate the magnitude and remove gravity
 			acc_mag = math.sqrt(accReal[0]*accReal[0] + accReal[1]*accReal[1] + accReal[2]*accReal[2])
-			gyro_mag = math.sqrt(Data.dmp_gyrox*Data.dmp_gyrox + Data.dmp_gyroy*Data.dmp_gyroy + Data.dmp_gyroz*Data.dmp_gyroz)	
-			#detect stationary states
-			if gyro_mag > 20:
+			gyro_mag = math.sqrt(Data.dmp_gyrox*Data.dmp_gyrox + Data.dmp_gyroy*Data.dmp_gyroy + Data.dmp_gyroz*Data.dmp_gyroz)					
+			accReal[2] = accReal[2] - 9.81			
+			# detect stationary states
+			zupt.ZeroCheck(acc_mag, gyro_mag)
+			# print zupt.state
+			#integrate	accelerate to velocity and position		
+			if zupt.state != 1:
 				#Update velocity and position
 				for i in range(3):
 					velocity[i] = velocity[i] + samplePeriod * (accReal[i] + accReal_1[i]) / 2
@@ -361,13 +410,13 @@ while True:
 				for i in range(3):
 					velocity[i] = 0
 				for i in range(3):
-					position[i] = position[i] + samplePeriod * (velocity[i]	+ velocity_1[i]) / 2			
+					position[i] = position[i] + samplePeriod * (velocity[i]	+ velocity_1[i]) / 2
 			accReal_1 = accReal
 			velocity_1 = velocity
 			#display parameter
 			disp_count += 1
-			if disp_count == 100:
-				disp_count = 0				
+			if disp_count == 20:
+				disp_count = 0			
 				print "quaternion: ", quat
 				print "euler: ", euler
 				print "acc: ", accReal
