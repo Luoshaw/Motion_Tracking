@@ -368,7 +368,7 @@ stationary = 0
 disp_count = 0
 zupt = ZUPT(20)
 #Init serial port
-reader = packet_reader('COM4', 500000, 1)
+reader = packet_reader('COM6', 500000, 1)
 
 #Init AHRS parameters
 [gyro_offset, AHRSalgorithm] = InitCovergence(gyro_offset)	
