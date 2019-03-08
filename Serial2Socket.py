@@ -49,11 +49,11 @@ class TcpData(object):
 		self.dmp_qz = 0.0
 		self.dmp_qw = 0.0
 		self.dmp_accx = 0.0
-		self.dmp_accx = 0.0
-		self.dmp_accx = 0.0
+		self.dmp_accy = 0.0
+		self.dmp_accz = 0.0
 		self.dmp_gyrox = 0.0
-		self.dmp_gyrox = 0.0
-		self.dmp_gyrox = 0.0
+		self.dmp_gyroy = 0.0
+		self.dmp_gyroz = 0.0
 		self.LocalTime = []
 		self.nothing = 0
 		self.year = 0
